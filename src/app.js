@@ -37,6 +37,31 @@ app.use(express.json({ limit: '10mb' }));
 app.use(apiLimiter);
 
 // ===== Health Check =====
+app.get('/', (req, res) => {
+    res.send('<h1>Halo, Selamat Datang di API ERP PESANTREN</h1>');
+});
+app.get('/info', (req, res) => {
+    res.json({
+        list_routes: {
+            auth: '/api/v1/auth',
+            users: '/api/v1/users',
+            rbac: '/api/v1/rbac',
+            tasks: '/api/v1/tasks',
+            izin: '/api/v1/izin',
+            inventaris: '/api/v1/inventaris',
+            evaluasi: '/api/v1/evaluasi',
+            grading: '/api/v1/grading',
+            divisi: '/api/v1/divisi',
+            platform: '/api/v1/platform',
+            asrama: '/api/v1/asrama',
+            ai: '/api/v1/ai',
+            notifications: '/api/v1/notifications',
+            upload: '/api/v1/upload',
+            search: '/api/v1/search',
+        }
+    });
+});
+
 app.get('/api/health', (req, res) => {
     res.json({
         status: 'ok',
