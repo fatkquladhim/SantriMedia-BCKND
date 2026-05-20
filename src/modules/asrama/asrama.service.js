@@ -4,7 +4,7 @@ export class AsramaService {
     async list() {
         const { data, error } = await supabaseAdmin
             .from('asrama')
-            .select('*, kamar:kamar(id, nomor)')
+            .select('*, kepala_asrama:kepala_asrama_id(id, full_name), kamar:kamar(id, nomor)')
             .order('nama');
         if (error) throw error;
         return data;
@@ -27,7 +27,7 @@ export class AsramaService {
     async getById(id) {
         const { data, error } = await supabaseAdmin
             .from('asrama')
-            .select('*, kamar:kamar(id, nomor, kapasitas)')
+            .select('*, kepala_asrama:kepala_asrama_id(id, full_name), kamar:kamar(id, nomor, kapasitas)')
             .eq('id', id)
             .single();
         if (error) throw error;
