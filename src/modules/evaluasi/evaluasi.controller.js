@@ -7,8 +7,8 @@ const evaluasiService = new EvaluasiService();
 export const list = async (req, res, next) => {
     try {
         const { page, limit, offset } = parsePagination(req.query);
-        const kepalaKamarId = req.user.base_role === 'kepala_kamar' ? req.user.id : undefined;
-        const { data, total } = await evaluasiService.list({ offset, limit, santriId: req.query.santri_id, bulan: req.query.bulan, kepalaKamarId });
+        const kepalaAsramaId = req.user.base_role === 'kepala_asrama' ? req.user.id : undefined;
+        const { data, total } = await evaluasiService.list({ offset, limit, santriId: req.query.santri_id, bulan: req.query.bulan, kepalaKamarId: kepalaAsramaId });
         return ApiResponse.paginated(res, data, { page, limit, total });
     } catch (err) { next(err); }
 };

@@ -7,6 +7,9 @@ import { logger } from '../shared/logger.js';
  */
 export const authGuard = async (req, res, next) => {
     try {
+        if (req.user) {
+            return next();
+        }
         logger.debug({ path: req.path }, 'Auth guard check starting');
         const authHeader = req.headers.authorization;
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -33,14 +36,14 @@ export const authGuard = async (req, res, next) => {
 
         const { data: permissions } = await supabaseAdmin
             .from('user_permissions')
-            .select('permission, divisi_id, platform_id')
+            .select('permission, target_id')
             .eq('user_id', user.id);
 
         const dynamicPermissions = (permissions || []).map(p => p.permission);
         const permissionDetails = (permissions || []).map(p => ({
             permission: p.permission,
-            divisi_id: p.divisi_id,
-            platform_id: p.platform_id
+            divisi_id: p.target_id,
+            platform_id: p.target_id
         }));
 
         // Attach to request

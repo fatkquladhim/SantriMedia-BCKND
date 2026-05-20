@@ -27,7 +27,7 @@ export class AsramaService {
     async getById(id) {
         const { data, error } = await supabaseAdmin
             .from('asrama')
-            .select('*, kamar:kamar(id, nomor, kapasitas, kepala_kamar:kepala_kamar_id(id, full_name))')
+            .select('*, kamar:kamar(id, nomor, kapasitas)')
             .eq('id', id)
             .single();
         if (error) throw error;

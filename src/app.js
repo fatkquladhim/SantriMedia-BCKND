@@ -23,6 +23,9 @@ import uploadRoutes from './modules/upload/upload.routes.js';
 import searchRoutes from './modules/search/search.routes.js';
 
 
+import { authGuard } from './middleware/authGuard.js';
+import { profileComplete } from './middleware/profileComplete.js';
+
 const app = express();
 
 // ===== Global Middleware =====
@@ -74,19 +77,19 @@ app.get('/api/health', (req, res) => {
 // ===== API Routes — v1 =====
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/users', usersRoutes);
-app.use('/api/v1/rbac', rbacRoutes);
-app.use('/api/v1/tasks', tasksRoutes);
-app.use('/api/v1/izin', izinRoutes);
-app.use('/api/v1/inventaris', inventarisRoutes);
-app.use('/api/v1/evaluasi', evaluasiRoutes);
-app.use('/api/v1/grading', gradingRoutes);
-app.use('/api/v1/divisi', divisiRoutes);
-app.use('/api/v1/platform', platformRoutes);
-app.use('/api/v1/asrama', asramaRoutes);
-app.use('/api/v1/ai', aiRoutes);
-app.use('/api/v1/notifications', notificationRoutes);
-app.use('/api/v1/upload', uploadRoutes);
-app.use('/api/v1/search', searchRoutes);
+app.use('/api/v1/rbac', authGuard, profileComplete, rbacRoutes);
+app.use('/api/v1/tasks', authGuard, profileComplete, tasksRoutes);
+app.use('/api/v1/izin', authGuard, profileComplete, izinRoutes);
+app.use('/api/v1/inventaris', authGuard, profileComplete, inventarisRoutes);
+app.use('/api/v1/evaluasi', authGuard, profileComplete, evaluasiRoutes);
+app.use('/api/v1/grading', authGuard, profileComplete, gradingRoutes);
+app.use('/api/v1/divisi', authGuard, profileComplete, divisiRoutes);
+app.use('/api/v1/platform', authGuard, profileComplete, platformRoutes);
+app.use('/api/v1/asrama', authGuard, profileComplete, asramaRoutes);
+app.use('/api/v1/ai', authGuard, profileComplete, aiRoutes);
+app.use('/api/v1/notifications', authGuard, profileComplete, notificationRoutes);
+app.use('/api/v1/upload', authGuard, profileComplete, uploadRoutes);
+app.use('/api/v1/search', authGuard, profileComplete, searchRoutes);
 
 
 // ===== 404 Handler =====

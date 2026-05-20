@@ -9,28 +9,33 @@ export const list = async (req, res, next) => {
         const { page, limit, offset } = parsePagination(req.query);
         const { status, assigned_to } = req.query;
         let { divisi_id, platform_id } = req.query;
+        let userScope = null;
 
         // STRICT PERMISSION FILTERING
         if (req.user.base_role !== 'admin') {
             const scopedDivisiIds = req.user.permissions
                 ?.filter(p => p.permission === 'ketua_divisi' && p.divisi_id)
-                .map(p => p.divisi_id) || [];
+                .map(p => p.divisi_id).filter(Boolean) || [];
 
             const scopedPlatformIds = req.user.permissions
                 ?.filter(p => p.permission === 'ketua_platform' && p.platform_id)
-                .map(p => p.platform_id) || [];
+                .map(p => p.platform_id).filter(Boolean) || [];
 
             if (scopedDivisiIds.length > 0) {
                 divisi_id = scopedDivisiIds;
             } else if (scopedPlatformIds.length > 0) {
                 platform_id = scopedPlatformIds;
             } else {
-                // REGULAR USER - Strictly lock to their profile division
-                if (!req.user.divisi_id) {
-                    // Blokir akses jika divisi belum dipilih (agar tidak melihat tugas liar)
+                // REGULAR USER — filter by assigned_to jika query ke diri sendiri
+                if (assigned_to && assigned_to === req.user.id) {
+                    // hanya filter by assigned_to, tidak perlu divisi_id
+                } else if (req.user.divisi_id) {
+                    // Tampilkan tugas divisi ATAU tugas yang di-assign ke user ini
+                    userScope = { userId: req.user.id, divisiId: req.user.divisi_id };
+                    divisi_id = undefined;
+                } else {
                     return ApiResponse.paginated(res, [], { page, limit, total: 0 });
                 }
-                divisi_id = req.user.divisi_id;
             }
         }
 
@@ -38,7 +43,8 @@ export const list = async (req, res, next) => {
             offset, limit, status,
             assignedTo: assigned_to,
             divisiId: divisi_id,
-            platformId: platform_id
+            platformId: platform_id,
+            userScope
         });
         return ApiResponse.paginated(res, data, { page, limit, total });
     } catch (err) { next(err); }
@@ -81,6 +87,14 @@ export const updateStatus = async (req, res, next) => {
 
 export const update = async (req, res, next) => {
     try {
+        if (req.user.base_role !== 'admin') {
+            const task = await tasksService.getById(req.params.id);
+            const hasDivisiPerm = req.user.permissions?.some(p => p.permission === 'ketua_divisi' && p.divisi_id === task.divisi_id);
+            const hasPlatformPerm = req.user.permissions?.some(p => p.permission === 'ketua_platform' && p.platform_id === task.platform_id);
+            if (!hasDivisiPerm && !hasPlatformPerm) {
+                return res.status(403).json({ success: false, message: 'Akses ditolak. Anda tidak berwenang mengelola tugas di divisi/platform ini.' });
+            }
+        }
         const data = await tasksService.update(req.params.id, req.body);
         return ApiResponse.success(res, data, 'Task berhasil diupdate');
     } catch (err) { next(err); }
@@ -88,6 +102,14 @@ export const update = async (req, res, next) => {
 
 export const remove = async (req, res, next) => {
     try {
+        if (req.user.base_role !== 'admin') {
+            const task = await tasksService.getById(req.params.id);
+            const hasDivisiPerm = req.user.permissions?.some(p => p.permission === 'ketua_divisi' && p.divisi_id === task.divisi_id);
+            const hasPlatformPerm = req.user.permissions?.some(p => p.permission === 'ketua_platform' && p.platform_id === task.platform_id);
+            if (!hasDivisiPerm && !hasPlatformPerm) {
+                return res.status(403).json({ success: false, message: 'Akses ditolak. Anda tidak berwenang menghapus tugas di divisi/platform ini.' });
+            }
+        }
         await tasksService.delete(req.params.id);
         return ApiResponse.success(res, null, 'Task berhasil dihapus');
     } catch (err) { next(err); }

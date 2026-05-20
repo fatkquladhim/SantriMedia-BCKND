@@ -53,7 +53,7 @@ export class InventarisService {
             // For now, we rely on the client-side list, but ideally, we find the exact staff
             // For MVP, we can notify 'admins' or just log it. 
             // Better: We notify all users with 'staf_alat' permission.
-            const { data: staffMembers } = await supabaseAdmin.from('dynamic_permissions').select('user_id').eq('permission', 'staf_alat');
+            const { data: staffMembers } = await supabaseAdmin.from('user_permissions').select('user_id').eq('permission', 'staf_alat');
             if (staffMembers) {
                 for (const staff of staffMembers) {
                     await notificationService.create({

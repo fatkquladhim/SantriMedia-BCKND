@@ -10,25 +10,34 @@ export class RbacService {
             .from('user_permissions')
             .select(`
                 *,
-                granted_by_profile:granted_by(full_name),
-                divisi:divisi_id(id, nama),
-                platform:platform_id(id, nama)
+                granted_by_profile:granted_by(full_name)
             `)
             .eq('user_id', userId);
         if (error) throw error;
 
+        // Fetch all divisi and platforms to map names in memory
+        const { data: divisi } = await supabaseAdmin.from('divisi').select('id, nama');
+        const { data: platform } = await supabaseAdmin.from('platform').select('id, nama');
+
+        const divisiMap = new Map((divisi || []).map(d => [d.id, d.nama]));
+        const platformMap = new Map((platform || []).map(p => [p.id, p.nama]));
+
         // Post-process to clarify which target it belongs to
-        return data.map(p => ({
-            ...p,
-            target_id: p.divisi_id || p.platform_id || null,
-            target_name: p.divisi?.nama || p.platform?.nama || null
-        }));
+        return data.map(p => {
+            let targetName = null;
+            if (p.permission === 'ketua_divisi') {
+                targetName = divisiMap.get(p.target_id) || null;
+            } else if (p.permission === 'ketua_platform') {
+                targetName = platformMap.get(p.target_id) || null;
+            }
+            return {
+                ...p,
+                target_name: targetName
+            };
+        });
     }
 
     async grantPermission(userId, permission, grantedBy, targetId = null) {
-        const divisiId = permission === 'ketua_divisi' ? targetId : null;
-        const platformId = permission === 'ketua_platform' ? targetId : null;
-
         // 1. Check if this exact permission already exists
         let query = supabaseAdmin
             .from('user_permissions')
@@ -36,11 +45,11 @@ export class RbacService {
             .eq('user_id', userId)
             .eq('permission', permission);
 
-        if (divisiId) query = query.eq('divisi_id', divisiId);
-        else query = query.is('divisi_id', null);
-
-        if (platformId) query = query.eq('platform_id', platformId);
-        else query = query.is('platform_id', null);
+        if (targetId) {
+            query = query.eq('target_id', targetId);
+        } else {
+            query = query.is('target_id', null);
+        }
 
         const { data: existing, error: findError } = await query.maybeSingle();
         if (findError) throw findError;
@@ -56,10 +65,9 @@ export class RbacService {
             .insert({
                 user_id: userId,
                 permission,
+                target_id: targetId,
                 granted_by: grantedBy,
                 granted_at: new Date().toISOString(),
-                divisi_id: divisiId,
-                platform_id: platformId
             })
             .select()
             .single();
@@ -90,10 +98,9 @@ export class RbacService {
             .eq('permission', permission);
 
         if (targetId) {
-            if (permission === 'ketua_divisi') query = query.eq('divisi_id', targetId);
-            if (permission === 'ketua_platform') query = query.eq('platform_id', targetId);
+            query = query.eq('target_id', targetId);
         } else {
-            query = query.is('divisi_id', null).is('platform_id', null);
+            query = query.is('target_id', null);
         }
 
         const { error } = await query;

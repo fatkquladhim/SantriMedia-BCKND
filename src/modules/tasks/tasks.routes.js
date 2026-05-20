@@ -13,6 +13,6 @@ router.post('/', authGuard, permissionGuard('ketua_divisi', 'ketua_platform'), v
 router.patch('/:id/status', authGuard, validate(updateStatusValidation), TasksController.updateStatus);
 router.put('/:id', authGuard, permissionGuard('ketua_divisi', 'ketua_platform'), TasksController.update);
 router.delete('/:id', authGuard, permissionGuard('ketua_divisi', 'ketua_platform'), TasksController.remove);
-router.patch('/:id/evidence', authGuard, validate(submitEvidenceValidation), TasksController.submitEvidence);
+router.put('/:id/evidence', authGuard, validate(submitEvidenceValidation), TasksController.submitEvidence);
 
 export default router;

@@ -29,7 +29,7 @@ export const list = async (req, res, next) => {
             // Non-managers are strictly locked to their own ID
             filterUserId = req.user.id;
             if (user_id && user_id !== req.user.id) {
-                return ApiResponse.forbidden(res, 'Akses ditolak: Anda hanya boleh melihat riwayat sendiri');
+                return ApiResponse.error(res, 'Akses ditolak: Anda hanya boleh melihat riwayat sendiri', 403);
             }
         }
 

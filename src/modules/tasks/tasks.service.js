@@ -5,24 +5,26 @@ import { NotificationService } from '../../modules/notifications/notifications.s
 const notificationService = new NotificationService();
 
 export class TasksService {
-    async list({ offset, limit, status, assignedTo, divisiId, platformId, createdBy }) {
+    async list({ offset, limit, status, assignedTo, divisiId, platformId, createdBy, userScope }) {
         let query = supabaseAdmin
             .from('tasks')
             .select('*, assigned_user:assigned_to(id, full_name), creator:created_by(id, full_name), divisi:divisi_id(id, nama), platform:platform_id(id, nama)', { count: 'exact' });
 
         if (status) {
-            const statusMap = {
-                'todo': 'todo',
-                'in progress': 'in_progress',
-                'in_progress': 'in_progress',
-                'review': 'review',
-                'done': 'done',
-                'cancelled': 'cancelled'
-            };
-            const mappedStatus = statusMap[status.toLowerCase()] || status.toLowerCase();
-            query = query.eq('status', mappedStatus);
+            const statusMap = { 'in progress': 'in_progress' };
+            const statuses = status.split(',').map(s => statusMap[s.trim().toLowerCase()] || s.trim().toLowerCase());
+            if (statuses.length === 1) {
+                query = query.eq('status', statuses[0]);
+            } else {
+                query = query.in('status', statuses);
+            }
         }
         if (assignedTo) query = query.eq('assigned_to', assignedTo);
+
+        // userScope: tampilkan tugas yang di-assign ke user ATAU tugas divisinya
+        if (userScope) {
+            query = query.or("assigned_to.eq." + userScope.userId + ",divisi_id.eq." + userScope.divisiId);
+        }
 
         if (divisiId) {
             if (Array.isArray(divisiId)) query = query.in('divisi_id', divisiId);

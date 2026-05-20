@@ -33,6 +33,8 @@ export class SearchService {
         if (user.base_role !== 'admin') {
             if (user.divisi_id) {
                 tasksQuery = tasksQuery.eq('divisi_id', user.divisi_id);
+            } else {
+                tasksQuery = tasksQuery.eq('assigned_to', user.id);
             }
         }
         

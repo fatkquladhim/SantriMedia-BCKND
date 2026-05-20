@@ -25,7 +25,7 @@ export class IzinService {
             // Smart status filtering for LIMITED dashboard views only
             if (reqUser.dynamic_permissions?.includes('staf_kantor')) {
                 query = query.eq('status', 'pending');
-            } else if (reqUser.base_role === 'kepala_kamar') {
+            } else if (reqUser.base_role === 'kepala_asrama') {
                 query = query.eq('status', 'approved_staf');
             }
         }
