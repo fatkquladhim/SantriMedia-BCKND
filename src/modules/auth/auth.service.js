@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '../../config/supabase.js';
 import { logger } from '../../shared/logger.js';
+import { auditAuth, auditData } from '../../shared/audit.js';
 
 export class AuthService {
     /**
@@ -14,6 +15,7 @@ export class AuthService {
             .single();
 
         if (whitelistError || !isAllowed) {
+            await auditAuth.failed_login(email, { reason: 'not_whitelisted' });
             throw {
                 status: 403,
                 message: 'Akses Ditolak. Email Anda belum terdaftar di sistem instansi sebagai anggota resmi. Silakan hubungi Admin.'
@@ -48,6 +50,15 @@ export class AuthService {
             throw profileError;
         }
 
+        // Audit log
+        await auditData.create(
+            authData.user.id,
+            'user',
+            'profile',
+            profile.id,
+            { full_name: fullName, email, base_role: 'user' }
+        );
+
         logger.info({ userId: authData.user.id }, 'New user registered');
         return { user: authData.user, profile };
     }
@@ -55,13 +66,18 @@ export class AuthService {
     /**
      * Login with email + password.
      */
-    async login({ email, password }) {
+    async login({ email, password, metadata }) {
         const { data, error } = await supabaseAdmin.auth.signInWithPassword({
             email,
             password,
         });
 
-        if (error) throw error;
+        if (error) {
+            await auditAuth.failed_login(email, { error: error.message, ...metadata });
+            throw error;
+        }
+
+        await auditAuth.login(data.user.id, 'user', metadata);
         return data;
     }
 
@@ -111,7 +127,7 @@ export class AuthService {
                 kamar_id: profileData.kamar_id,
                 alamat: profileData.alamat,
                 nomor_darurat: profileData.nomor_darurat,
-                base_role: currentProfile?.base_role || 'user', // Ensure role is never null
+                base_role: currentProfile?.base_role || 'user',
                 is_profile_complete: true,
                 updated_at: new Date().toISOString(),
             })
@@ -120,6 +136,17 @@ export class AuthService {
             .single();
 
         if (error) throw error;
+
+        // Sync is_profile_complete to Supabase Auth user_metadata
+        // so the frontend middleware can read it from the session
+        const { error: metaError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+            user_metadata: { is_profile_complete: true },
+        });
+
+        if (metaError) {
+            logger.warn({ userId, metaError }, 'Failed to update auth user_metadata');
+        }
+
         logger.info({ userId }, 'Profile completed');
         return data;
     }

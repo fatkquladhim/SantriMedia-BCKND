@@ -1,6 +1,6 @@
 {
     "name": "erp-pesantren-backend",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "Backend API for ERP Multimedia Pesantren Terpadu (AI Agent-based)",
     "main": "src/server.js",
     "type": "module",
@@ -25,6 +25,7 @@
         "express-rate-limit": "^8.3.0",
         "express-validator": "^7.3.1",
         "helmet": "^8.1.0",
+        "jose": "^6.2.3",
         "multer": "^2.1.1",
         "node-cron": "^4.2.1",
         "pino": "^10.3.1",

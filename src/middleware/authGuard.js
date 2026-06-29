@@ -1,9 +1,11 @@
 import { supabaseAdmin } from '../config/supabase.js';
 import { logger } from '../shared/logger.js';
+import { verifyJWT, extractUserFromPayload } from '../shared/jwtVerify.js';
 
 /**
  * Layer 1: Verify JWT token and attach user to request.
- * Reads base_role and dynamic_permissions from the profile + user_permissions table.
+ * 1. Local JWT verification (signature, exp, iss, aud)
+ * 2. Fetch profile + permissions from DB
  */
 export const authGuard = async (req, res, next) => {
     try {
@@ -18,26 +20,38 @@ export const authGuard = async (req, res, next) => {
 
         const token = authHeader.replace('Bearer ', '');
 
-        // Verify token with Supabase Admin (does not respect RLS)
-        const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
-
-        if (error || !user) {
-            logger.warn({ error }, 'Invalid token in authGuard');
+        // 1. Local JWT verification (fast, no network call)
+        let payload;
+        try {
+            payload = await verifyJWT(token);
+        } catch (err) {
+            logger.warn({ err }, 'Local JWT verification failed');
             return res.status(401).json({ success: false, message: 'Token tidak valid atau sudah expired' });
         }
-        logger.debug({ userId: user.id }, 'Token verified, fetching profile');
 
-        // Fetch profile + permissions from DB
-        const { data: profile } = await supabaseAdmin
+        const userId = payload.sub;
+        logger.debug({ userId }, 'Local JWT verified, fetching profile');
+
+        // 2. Fetch profile + permissions from DB (single query with join)
+        const { data: profile, error: profileError } = await supabaseAdmin
             .from('profiles')
-            .select('id, full_name, email, base_role, is_profile_complete, divisi_id')
-            .eq('id', user.id)
+            .select(`
+                id, full_name, email, base_role, is_profile_complete, divisi_id,
+                divisi:divisi_id ( id, nama ),
+                kamar:kamar_id ( id, nomor, asrama:asrama_id ( id, nama ) )
+            `)
+            .eq('id', userId)
             .single();
+
+        if (profileError || !profile) {
+            logger.warn({ profileError, userId }, 'Profile not found');
+            return res.status(401).json({ success: false, message: 'User profile not found' });
+        }
 
         const { data: permissions } = await supabaseAdmin
             .from('user_permissions')
             .select('permission, target_id')
-            .eq('user_id', user.id);
+            .eq('user_id', userId);
 
         const dynamicPermissions = (permissions || []).map(p => p.permission);
         const permissionDetails = (permissions || []).map(p => ({
@@ -48,12 +62,14 @@ export const authGuard = async (req, res, next) => {
 
         // Attach to request
         req.user = {
-            id: user.id,
-            email: user.email,
-            full_name: profile?.full_name || '',
-            base_role: profile?.base_role || 'user',
-            is_profile_complete: profile?.is_profile_complete || false,
-            divisi_id: profile?.divisi_id || null, // Base division from profile
+            id: profile.id,
+            email: profile.email,
+            full_name: profile.full_name,
+            base_role: profile.base_role,
+            is_profile_complete: profile.is_profile_complete,
+            divisi_id: profile.divisi_id || null,
+            divisi: profile.divisi || null,
+            kamar: profile.kamar || null,
             dynamic_permissions: dynamicPermissions,
             permissions: permissionDetails,
         };

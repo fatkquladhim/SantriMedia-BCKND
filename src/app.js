@@ -26,16 +26,37 @@ import searchRoutes from './modules/search/search.routes.js';
 import { authGuard } from './middleware/authGuard.js';
 import { profileComplete } from './middleware/profileComplete.js';
 
-const app = express();
+// CORS Allowlist with validation
+const allowedOrigins = (env.frontendUrl || 'http://localhost:3000')
+    .split(',')
+    .map(o => o.trim())
+    .filter(Boolean);
 
-// ===== Global Middleware =====
-app.use(helmet());
-app.use(cors({
-    origin: env.frontendUrl,
+const corsOptions = {
+    origin: (origin, callback) => {
+        // Allow requests with no origin (mobile apps, curl, server-to-server)
+        if (!origin) return callback(null, true);
+
+        if (allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error(`CORS blocked: ${origin} not in allowlist`));
+        }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
+    maxAge: 86400, // 24 hours
+};
+
+const app = express();
+
+// ===== Global Middleware =====
+app.use(helmet({
+    contentSecurityPolicy: false, // API doesn't serve HTML
+    crossOriginEmbedderPolicy: false,
 }));
+app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(apiLimiter);
 

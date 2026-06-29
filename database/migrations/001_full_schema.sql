@@ -257,10 +257,11 @@ DECLARE
   claims JSONB;
   user_base_role public.base_role;
   user_permissions JSONB;
+  user_profile_complete BOOLEAN;
 BEGIN
   claims := event->'claims';
 
-  SELECT p.base_role INTO user_base_role
+  SELECT p.base_role, p.is_profile_complete INTO user_base_role, user_profile_complete
   FROM public.profiles p
   WHERE p.id = (event->>'user_id')::UUID;
 
@@ -271,6 +272,7 @@ BEGIN
 
   claims := jsonb_set(claims, '{base_role}', to_jsonb(user_base_role));
   claims := jsonb_set(claims, '{dynamic_permissions}', user_permissions);
+  claims := jsonb_set(claims, '{is_profile_complete}', to_jsonb(COALESCE(user_profile_complete, FALSE)));
   event := jsonb_set(event, '{claims}', claims);
 
   RETURN event;

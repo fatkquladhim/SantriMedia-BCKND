@@ -1,6 +1,7 @@
 import { supabaseAdmin } from '../../config/supabase.js';
 import { logger } from '../../shared/logger.js';
 import { NotificationService } from '../notifications/notifications.service.js';
+import { auditRbac, auditData, auditAdmin } from '../../shared/audit.js';
 
 const notificationService = new NotificationService();
 
@@ -74,6 +75,9 @@ export class RbacService {
 
         if (error) throw error;
 
+        // Audit log
+        await auditRbac.grant_permission(grantedBy, 'admin', userId, permission, targetId);
+
         // Notify User
         try {
             const formattedPerm = permission.replace('_', ' ').toUpperCase();
@@ -90,7 +94,7 @@ export class RbacService {
         return data;
     }
 
-    async revokePermission(userId, permission, targetId = null) {
+    async revokePermission(userId, permission, targetId = null, revokedBy) {
         let query = supabaseAdmin
             .from('user_permissions')
             .delete()
@@ -105,10 +109,23 @@ export class RbacService {
 
         const { error } = await query;
         if (error) throw error;
+
+        // Audit log
+        await auditRbac.revoke_permission(revokedBy, 'admin', userId, permission, targetId);
+
         logger.info({ userId, permission, targetId }, 'Permission revoked');
     }
 
-    async setBaseRole(userId, role) {
+    async setBaseRole(userId, role, changedBy) {
+        // Get old role for audit
+        const { data: current } = await supabaseAdmin
+            .from('profiles')
+            .select('base_role')
+            .eq('id', userId)
+            .single();
+
+        const oldRole = current?.base_role || 'user';
+
         const { data, error } = await supabaseAdmin
             .from('profiles')
             .update({ base_role: role, updated_at: new Date().toISOString() })
@@ -116,6 +133,9 @@ export class RbacService {
             .select()
             .single();
         if (error) throw error;
+
+        // Audit log
+        await auditRbac.change_role(changedBy, 'admin', userId, oldRole, role);
 
         // Notify User
         try {
