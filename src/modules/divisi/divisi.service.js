@@ -9,7 +9,7 @@ export class DivisiService {
 
     async getById(id) {
         const { data, error } = await supabaseAdmin.from('divisi')
-            .select('*, platforms:platform(id, nama)').eq('id', id).single();
+            .select('*').eq('id', id).single();
         if (error) throw error;
         return data;
     }

@@ -2,7 +2,6 @@ export const BASE_ROLES = ['admin', 'kepala_asrama', 'user'];
 
 export const DYNAMIC_PERMISSIONS = [
     'ketua_divisi',
-    'ketua_platform',
     'staf_kantor',
     'staf_alat',
     'sdm',

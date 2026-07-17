@@ -38,7 +38,7 @@ export const authGuard = async (req, res, next) => {
             .select(`
                 id, full_name, email, base_role, is_profile_complete, divisi_id,
                 divisi:divisi_id ( id, nama ),
-                kamar:kamar_id ( id, nomor, asrama:asrama_id ( id, nama ) )
+                asrama:asrama_id ( id, nama )
             `)
             .eq('id', userId)
             .single();
@@ -57,7 +57,6 @@ export const authGuard = async (req, res, next) => {
         const permissionDetails = (permissions || []).map(p => ({
             permission: p.permission,
             divisi_id: p.target_id,
-            platform_id: p.target_id
         }));
 
         // Attach to request
@@ -69,7 +68,8 @@ export const authGuard = async (req, res, next) => {
             is_profile_complete: profile.is_profile_complete,
             divisi_id: profile.divisi_id || null,
             divisi: profile.divisi || null,
-            kamar: profile.kamar || null,
+            asrama_id: profile.asrama_id || null,
+            asrama: profile.asrama || null,
             dynamic_permissions: dynamicPermissions,
             permissions: permissionDetails,
         };

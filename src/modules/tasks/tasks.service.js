@@ -5,10 +5,10 @@ import { NotificationService } from '../../modules/notifications/notifications.s
 const notificationService = new NotificationService();
 
 export class TasksService {
-    async list({ offset, limit, status, assignedTo, divisiId, platformId, createdBy, userScope }) {
+    async list({ offset, limit, status, assignedTo, divisiId, createdBy, userScope }) {
         let query = supabaseAdmin
             .from('tasks')
-            .select('*, assigned_user:assigned_to(id, full_name), creator:created_by(id, full_name), divisi:divisi_id(id, nama), platform:platform_id(id, nama)', { count: 'exact' });
+            .select('*, assigned_user:assigned_to(id, full_name), creator:created_by(id, full_name), divisi:divisi_id(id, nama)', { count: 'exact' });
 
         if (status) {
             const statusMap = { 'in progress': 'in_progress' };
@@ -31,11 +31,6 @@ export class TasksService {
             else query = query.eq('divisi_id', divisiId);
         }
 
-        if (platformId) {
-            if (Array.isArray(platformId)) query = query.in('platform_id', platformId);
-            else query = query.eq('platform_id', platformId);
-        }
-
         if (createdBy) query = query.eq('created_by', createdBy);
 
         const { data, count, error } = await query
@@ -48,7 +43,7 @@ export class TasksService {
     async getById(id) {
         const { data, error } = await supabaseAdmin
             .from('tasks')
-            .select('*, assigned_user:assigned_to(id, full_name, email), creator:created_by(id, full_name), divisi:divisi_id(id, nama), platform:platform_id(id, nama)')
+            .select('*, assigned_user:assigned_to(id, full_name, email), creator:created_by(id, full_name), divisi:divisi_id(id, nama)')
             .eq('id', id)
             .single();
         if (error) throw error;

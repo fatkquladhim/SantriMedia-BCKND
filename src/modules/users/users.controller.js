@@ -12,7 +12,7 @@ export const list = async (req, res, next) => {
 
         // Scoping for non-admins (Ketua Divisi / Platform)
         if (req.user.base_role !== 'admin' && req.user.base_role !== 'sdm') {
-            const isKetua = req.user.dynamic_permissions?.some(p => p === 'ketua_divisi' || p === 'ketua_platform');
+            const isKetua = req.user.dynamic_permissions?.some(p => p === 'ketua_divisi');
 
             if (isKetua && (divisi_only === 'true' || divisi_only === true)) {
                 // Restrict to user's own division if they are a leader
@@ -49,15 +49,24 @@ export const update = async (req, res, next) => {
     } catch (err) { next(err); }
 };
 
+export const remove = async (req, res, next) => {
+    try {
+        await usersService.remove(req.params.id);
+        return ApiResponse.success(res, null, 'User berhasil dihapus');
+    } catch (err) { next(err); }
+};
+
 export const updateMe = async (req, res, next) => {
     try {
-        const { fullName, bio, avatarUrl, divisiId, kamarId } = req.body;
+        const { fullName, bio, avatarUrl, divisiId, asramaId, alamat, nomorDarurat } = req.body;
         const data = await usersService.update(req.user.id, { 
             full_name: fullName, 
             bio, 
             avatar_url: avatarUrl,
             divisi_id: divisiId,
-            kamar_id: kamarId,
+            asrama_id: asramaId,
+            alamat: alamat,
+            nomor_darurat: nomorDarurat,
             is_profile_complete: true // Mark profile as complete after they update
         });
         return ApiResponse.success(res, data, 'Profil berhasil diperbarui');

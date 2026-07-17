@@ -8,7 +8,7 @@ export const list = async (req, res, next) => {
     try {
         const { page, limit, offset } = parsePagination(req.query);
         const { status, assigned_to } = req.query;
-        let { divisi_id, platform_id } = req.query;
+        let { divisi_id } = req.query;
         let userScope = null;
 
         // STRICT PERMISSION FILTERING
@@ -17,14 +17,8 @@ export const list = async (req, res, next) => {
                 ?.filter(p => p.permission === 'ketua_divisi' && p.divisi_id)
                 .map(p => p.divisi_id).filter(Boolean) || [];
 
-            const scopedPlatformIds = req.user.permissions
-                ?.filter(p => p.permission === 'ketua_platform' && p.platform_id)
-                .map(p => p.platform_id).filter(Boolean) || [];
-
             if (scopedDivisiIds.length > 0) {
                 divisi_id = scopedDivisiIds;
-            } else if (scopedPlatformIds.length > 0) {
-                platform_id = scopedPlatformIds;
             } else {
                 // REGULAR USER — filter by assigned_to jika query ke diri sendiri
                 if (assigned_to && assigned_to === req.user.id) {
@@ -43,7 +37,6 @@ export const list = async (req, res, next) => {
             offset, limit, status,
             assignedTo: assigned_to,
             divisiId: divisi_id,
-            platformId: platform_id,
             userScope
         });
         return ApiResponse.paginated(res, data, { page, limit, total });
@@ -69,7 +62,7 @@ export const updateStatus = async (req, res, next) => {
 
         // PROTEKSI: Hanya Admin atau Ketua yang boleh Approve (done) atau Cancel tugas
         if (status === 'done' || status === 'cancelled') {
-            const isKetua = user.dynamic_permissions?.some(p => ['ketua_divisi', 'ketua_platform'].includes(p));
+            const isKetua = user.dynamic_permissions?.some(p => p === 'ketua_divisi');
             const isAdmin = user.base_role === 'admin';
 
             if (!isAdmin && !isKetua) {
@@ -90,9 +83,8 @@ export const update = async (req, res, next) => {
         if (req.user.base_role !== 'admin') {
             const task = await tasksService.getById(req.params.id);
             const hasDivisiPerm = req.user.permissions?.some(p => p.permission === 'ketua_divisi' && p.divisi_id === task.divisi_id);
-            const hasPlatformPerm = req.user.permissions?.some(p => p.permission === 'ketua_platform' && p.platform_id === task.platform_id);
-            if (!hasDivisiPerm && !hasPlatformPerm) {
-                return res.status(403).json({ success: false, message: 'Akses ditolak. Anda tidak berwenang mengelola tugas di divisi/platform ini.' });
+            if (!hasDivisiPerm) {
+                return res.status(403).json({ success: false, message: 'Akses ditolak. Anda tidak berwenang mengelola tugas di divisi ini.' });
             }
         }
         const data = await tasksService.update(req.params.id, req.body);
@@ -105,9 +97,8 @@ export const remove = async (req, res, next) => {
         if (req.user.base_role !== 'admin') {
             const task = await tasksService.getById(req.params.id);
             const hasDivisiPerm = req.user.permissions?.some(p => p.permission === 'ketua_divisi' && p.divisi_id === task.divisi_id);
-            const hasPlatformPerm = req.user.permissions?.some(p => p.permission === 'ketua_platform' && p.platform_id === task.platform_id);
-            if (!hasDivisiPerm && !hasPlatformPerm) {
-                return res.status(403).json({ success: false, message: 'Akses ditolak. Anda tidak berwenang menghapus tugas di divisi/platform ini.' });
+            if (!hasDivisiPerm) {
+                return res.status(403).json({ success: false, message: 'Akses ditolak. Anda tidak berwenang menghapus tugas di divisi ini.' });
             }
         }
         await tasksService.delete(req.params.id);

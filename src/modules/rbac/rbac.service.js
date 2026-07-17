@@ -16,20 +16,16 @@ export class RbacService {
             .eq('user_id', userId);
         if (error) throw error;
 
-        // Fetch all divisi and platforms to map names in memory
+        // Fetch all divisi to map names in memory
         const { data: divisi } = await supabaseAdmin.from('divisi').select('id, nama');
-        const { data: platform } = await supabaseAdmin.from('platform').select('id, nama');
 
         const divisiMap = new Map((divisi || []).map(d => [d.id, d.nama]));
-        const platformMap = new Map((platform || []).map(p => [p.id, p.nama]));
 
         // Post-process to clarify which target it belongs to
         return data.map(p => {
             let targetName = null;
             if (p.permission === 'ketua_divisi') {
                 targetName = divisiMap.get(p.target_id) || null;
-            } else if (p.permission === 'ketua_platform') {
-                targetName = platformMap.get(p.target_id) || null;
             }
             return {
                 ...p,

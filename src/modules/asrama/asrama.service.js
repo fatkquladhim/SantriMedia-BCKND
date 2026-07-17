@@ -4,10 +4,10 @@ export class AsramaService {
     async list() {
         const { data, error } = await supabaseAdmin
             .from('asrama')
-            .select('*, kepala_asrama:kepala_asrama_id(id, full_name), kamar:kamar(id, nomor)')
+            .select('*, kamar:kamar(id, nomor)')
             .order('nama');
         if (error) throw error;
-        return data;
+        return this.attachKepalaAsrama(data);
     }
 
     async listAllKamar() {
@@ -27,11 +27,26 @@ export class AsramaService {
     async getById(id) {
         const { data, error } = await supabaseAdmin
             .from('asrama')
-            .select('*, kepala_asrama:kepala_asrama_id(id, full_name), kamar:kamar(id, nomor, kapasitas)')
+            .select('*, kamar:kamar(id, nomor, kapasitas)')
             .eq('id', id)
             .single();
         if (error) throw error;
-        return data;
+        return this.attachKepalaAsrama([data])[0];
+    }
+
+    // Resolve kepala_asrama name without relying on the broken PostgREST FK relationship
+    async attachKepalaAsrama(rows) {
+        const ids = [...new Set(rows.map(r => r.kepala_asrama_id).filter(Boolean))];
+        if (ids.length === 0) return rows;
+        const { data: profiles } = await supabaseAdmin
+            .from('profiles')
+            .select('id, full_name')
+            .in('id', ids);
+        const map = new Map((profiles || []).map(p => [p.id, p]));
+        return rows.map(r => ({
+            ...r,
+            kepala_asrama: r.kepala_asrama_id ? map.get(r.kepala_asrama_id) || null : null,
+        }));
     }
 
     async create(asramaData) {

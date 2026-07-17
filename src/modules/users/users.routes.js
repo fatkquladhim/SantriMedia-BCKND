@@ -8,7 +8,7 @@ import { updateUserValidation } from './users.validation.js';
 const router = Router();
 
 router.get('/', authGuard, (req, res, next) => {
-    const isPimpinan = req.user.dynamic_permissions?.some(p => p === 'ketua_divisi' || p === 'ketua_platform');
+    const isPimpinan = req.user.dynamic_permissions?.some(p => p === 'ketua_divisi');
     if (req.user.base_role === 'admin' || req.user.base_role === 'sdm' || isPimpinan) {
         return next();
     }
@@ -18,5 +18,6 @@ router.post('/', authGuard, roleGuard('admin'), UsersController.create);
 router.get('/:id', authGuard, UsersController.getById);
 router.patch('/me', authGuard, UsersController.updateMe);
 router.put('/:id', authGuard, roleGuard('admin'), validate(updateUserValidation), UsersController.update);
+router.delete('/:id', authGuard, roleGuard('admin'), UsersController.remove);
 
 export default router;

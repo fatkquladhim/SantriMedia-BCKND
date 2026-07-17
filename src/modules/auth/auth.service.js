@@ -90,7 +90,7 @@ export class AuthService {
             .select(`
         *,
         divisi:divisi_id ( id, nama ),
-        kamar:kamar_id ( id, nomor, asrama:asrama_id ( id, nama ) )
+        asrama:asrama_id ( id, nama )
       `)
             .eq('id', userId)
             .single();
@@ -109,7 +109,7 @@ export class AuthService {
     }
 
     /**
-     * Complete user profile (onboarding).
+     * Complete user profile (onboarding). NIS is auto-generated.
      */
     async completeProfile(userId, profileData) {
         // Get current profile to check role
@@ -119,12 +119,21 @@ export class AuthService {
             .eq('id', userId)
             .single();
 
+        // Fetch asrama to generate NIS
+        const { data: asrama } = await supabaseAdmin
+            .from('asrama')
+            .select('id')
+            .eq('id', profileData.asrama_id)
+            .single();
+
+        const nomorInduk = await this.generateNIS(asrama?.id);
+
         const { data, error } = await supabaseAdmin
             .from('profiles')
             .update({
-                nomor_induk: profileData.nomor_induk,
+                nomor_induk: nomorInduk,
                 divisi_id: profileData.divisi_id,
-                kamar_id: profileData.kamar_id,
+                asrama_id: profileData.asrama_id,
                 alamat: profileData.alamat,
                 nomor_darurat: profileData.nomor_darurat,
                 base_role: currentProfile?.base_role || 'user',
@@ -137,8 +146,6 @@ export class AuthService {
 
         if (error) throw error;
 
-        // Sync is_profile_complete to Supabase Auth user_metadata
-        // so the frontend middleware can read it from the session
         const { error: metaError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
             user_metadata: { is_profile_complete: true },
         });
@@ -147,11 +154,44 @@ export class AuthService {
             logger.warn({ userId, metaError }, 'Failed to update auth user_metadata');
         }
 
-        logger.info({ userId }, 'Profile completed');
+        logger.info({ userId, nomorInduk }, 'Profile completed');
         return data;
     }
+
     /**
-     * Get data needed for onboarding (list of divisi and kamar).
+     * Generate Nomor Induk Santri (NIS): NIS-{tahun}-{asrama}-{urutan}
+     * Example: NIS-2026-01-001
+     */
+    async generateNIS(asramaId) {
+        const year = new Date().getFullYear();
+
+        // Asrama index (1-based, ordered by creation)
+        let asramaNum = '01';
+        if (asramaId) {
+            const { data: asramas } = await supabaseAdmin
+                .from('asrama')
+                .select('id')
+                .order('created_at', { ascending: true });
+            const idx = (asramas || []).findIndex(a => a.id === asramaId);
+            if (idx >= 0) asramaNum = String(idx + 1).padStart(2, '0');
+        }
+
+        // Sequence: count of profiles already having a NIS in the same asrama
+        let seq = 1;
+        if (asramaId) {
+            const { count, error } = await supabaseAdmin
+                .from('profiles')
+                .select('*', { count: 'exact', head: true })
+                .eq('asrama_id', asramaId)
+                .not('nomor_induk', 'is', null);
+            if (!error && count) seq = count + 1;
+        }
+
+        return `NIS-${year}-${asramaNum}-${String(seq).padStart(3, '0')}`;
+    }
+
+    /**
+     * Get data needed for onboarding (list of divisi and asrama).
      */
     async getOnboardingData() {
         const { data: divisi, error: divisiError } = await supabaseAdmin
@@ -161,23 +201,13 @@ export class AuthService {
 
         if (divisiError) throw divisiError;
 
-        const { data: kamar, error: kamarError } = await supabaseAdmin
-            .from('kamar')
-            .select(`
-                id,
-                nomor,
-                asrama:asrama_id ( nama )
-            `)
-            .order('nomor');
+        const { data: asrama, error: asramaError } = await supabaseAdmin
+            .from('asrama')
+            .select('id, nama')
+            .order('nama');
 
-        if (kamarError) throw kamarError;
+        if (asramaError) throw asramaError;
 
-        return {
-            divisi,
-            kamar: kamar.map(k => ({
-                id: k.id,
-                label: `Kamar ${k.nomor} - ${k.asrama?.nama || 'Tanpa Asrama'}`
-            }))
-        };
+        return { divisi, asrama };
     }
 }

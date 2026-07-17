@@ -12,9 +12,8 @@ export const loginValidation = [
 ];
 
 export const completeProfileValidation = [
-    body('nomor_induk').notEmpty().withMessage('Nomor induk wajib diisi'),
     body('divisi_id').isUUID().withMessage('Divisi ID harus UUID valid'),
-    body('kamar_id').isUUID().withMessage('Kamar ID harus UUID valid'),
+    body('asrama_id').isUUID().withMessage('Asrama ID harus UUID valid'),
     body('alamat').notEmpty().withMessage('Alamat wajib diisi'),
     body('nomor_darurat').notEmpty().withMessage('Nomor darurat wajib diisi'),
 ];

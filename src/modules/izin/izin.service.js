@@ -69,7 +69,7 @@ export class IzinService {
                 catatan_approval: catatan, 
                 updated_at: new Date().toISOString() 
             })
-            .eq('id', id).select('*, user:user_id(id, full_name, kamar_id)').single();
+            .eq('id', id).select('*, user:user_id(id, full_name, asrama_id)').single();
 
         if (error) throw error;
 

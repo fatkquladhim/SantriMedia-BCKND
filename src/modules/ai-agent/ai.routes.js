@@ -12,7 +12,7 @@ router.post(
     '/task-dispatch',
     authGuard,
     aiLimiter,
-    permissionGuard('ketua_divisi', 'ketua_platform'),
+    permissionGuard('ketua_divisi'),
     AiController.recommendAssignment
 );
 

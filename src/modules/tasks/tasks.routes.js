@@ -9,10 +9,10 @@ const router = Router();
 
 router.get('/', authGuard, TasksController.list);
 router.get('/:id', authGuard, TasksController.getById);
-router.post('/', authGuard, permissionGuard('ketua_divisi', 'ketua_platform'), validate(createTaskValidation), TasksController.create);
+router.post('/', authGuard, permissionGuard('ketua_divisi'), validate(createTaskValidation), TasksController.create);
 router.patch('/:id/status', authGuard, validate(updateStatusValidation), TasksController.updateStatus);
-router.put('/:id', authGuard, permissionGuard('ketua_divisi', 'ketua_platform'), TasksController.update);
-router.delete('/:id', authGuard, permissionGuard('ketua_divisi', 'ketua_platform'), TasksController.remove);
+router.put('/:id', authGuard, permissionGuard('ketua_divisi'), TasksController.update);
+router.delete('/:id', authGuard, permissionGuard('ketua_divisi'), TasksController.remove);
 router.put('/:id/evidence', authGuard, validate(submitEvidenceValidation), TasksController.submitEvidence);
 
 export default router;
