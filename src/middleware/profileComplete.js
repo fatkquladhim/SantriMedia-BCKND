@@ -1,11 +1,16 @@
 /**
  * Profile completeness gate.
  * Blocks API access if user's profile is not complete.
- * Allows access to: auth, profile completion, and health endpoints.
+ * Admin bypass: admin selalu dianggap profile complete, tidak perlu onboarding.
  */
 export const profileComplete = (req, res, next) => {
     if (!req.user) {
         return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    // Admin bypass — tidak perlu melengkapi profil
+    if (req.user.base_role === 'admin') {
+        return next();
     }
 
     if (!req.user.is_profile_complete) {

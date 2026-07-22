@@ -109,7 +109,8 @@ export class AuthService {
     }
 
     /**
-     * Complete user profile (onboarding). NIS is auto-generated.
+     * Complete user profile (onboarding). NIS di-generate otomatis untuk non-admin.
+     * Admin tidak memerlukan NIS, asrama, atau alamat.
      */
     async completeProfile(userId, profileData) {
         // Get current profile to check role
@@ -119,27 +120,33 @@ export class AuthService {
             .eq('id', userId)
             .single();
 
-        // Fetch asrama to generate NIS
-        const { data: asrama } = await supabaseAdmin
-            .from('asrama')
-            .select('id')
-            .eq('id', profileData.asrama_id)
-            .single();
+        const isAdmin = currentProfile?.base_role === 'admin';
 
-        const nomorInduk = await this.generateNIS(asrama?.id);
+        // Generate NIS hanya untuk non-admin yang punya asrama
+        let nomorInduk = null;
+        if (!isAdmin && profileData.asrama_id) {
+            const { data: asrama } = await supabaseAdmin
+                .from('asrama')
+                .select('id')
+                .eq('id', profileData.asrama_id)
+                .single();
+            nomorInduk = await this.generateNIS(asrama?.id);
+        }
+
+        const updatePayload = {
+            ...(nomorInduk && { nomor_induk: nomorInduk }),
+            divisi_id: profileData.divisi_id || null,
+            asrama_id: isAdmin ? null : (profileData.asrama_id || null),
+            alamat: isAdmin ? null : (profileData.alamat || null),
+            no_hp: profileData.no_hp || null,
+            base_role: currentProfile?.base_role || 'user',
+            is_profile_complete: true,
+            updated_at: new Date().toISOString(),
+        };
 
         const { data, error } = await supabaseAdmin
             .from('profiles')
-            .update({
-                nomor_induk: nomorInduk,
-                divisi_id: profileData.divisi_id,
-                asrama_id: profileData.asrama_id,
-                alamat: profileData.alamat,
-                nomor_darurat: profileData.nomor_darurat,
-                base_role: currentProfile?.base_role || 'user',
-                is_profile_complete: true,
-                updated_at: new Date().toISOString(),
-            })
+            .update(updatePayload)
             .eq('id', userId)
             .select()
             .single();
