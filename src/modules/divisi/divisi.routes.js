@@ -10,7 +10,7 @@ const router = Router();
 router.get('/', authGuard, DivisiController.list);
 router.get('/:id', authGuard, DivisiController.getById);
 router.post('/', authGuard, roleGuard('admin'), validate(createDivisiValidation), DivisiController.create);
-router.put('/:id', authGuard, roleGuard('admin'), DivisiController.update);
+router.put('/:id', authGuard, roleGuard('admin'), validate(createDivisiValidation), DivisiController.update);
 router.delete('/:id', authGuard, roleGuard('admin'), DivisiController.remove);
 
 export default router;

@@ -15,5 +15,8 @@ export const completeProfileValidation = [
     body('divisi_id').isUUID().withMessage('Divisi ID harus UUID valid'),
     body('asrama_id').isUUID().withMessage('Asrama ID harus UUID valid'),
     body('alamat').notEmpty().withMessage('Alamat wajib diisi'),
-    body('nomor_darurat').notEmpty().withMessage('Nomor darurat wajib diisi'),
+    body('no_hp')
+        .optional()
+        .matches(/^(\+62|62|0)[0-9]{8,13}$/)
+        .withMessage('Format nomor HP tidak valid (contoh: 08123456789)'),
 ];

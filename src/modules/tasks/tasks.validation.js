@@ -3,10 +3,10 @@ import { TASK_STATUSES, TASK_PRIORITIES } from '../../config/constants.js';
 
 export const createTaskValidation = [
     body('judul').notEmpty().withMessage('Judul task wajib diisi'),
-    body('assigned_to').optional().isUUID().withMessage('assigned_to harus UUID'),
-    body('divisi_id').optional().isUUID().withMessage('divisi_id harus UUID'),
+    body('assigned_to').optional({ nullable: true, checkFalsy: true }).isUUID().withMessage('assigned_to harus UUID'),
+    body('divisi_id').optional({ nullable: true, checkFalsy: true }).isUUID().withMessage('divisi_id harus UUID'),
     body('priority').optional().isIn(TASK_PRIORITIES).withMessage('Priority tidak valid'),
-    body('deadline').optional().isISO8601().withMessage('Deadline harus format ISO 8601'),
+    body('deadline').optional({ nullable: true, checkFalsy: true }).isISO8601().withMessage('Deadline harus format ISO 8601'),
 ];
 
 export const updateStatusValidation = [

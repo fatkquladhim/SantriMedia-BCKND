@@ -33,7 +33,7 @@ export const deleteAlat = async (req, res, next) => {
 export const listPeminjaman = async (req, res, next) => {
     try {
         const { page, limit, offset } = parsePagination(req.query);
-        const userId = req.user.dynamic_permissions.includes('staf_alat') || req.user.base_role === 'admin' ? req.query.user_id : req.user.id;
+        const userId = (req.user.dynamic_permissions.includes('staf_alat') || req.user.base_role === 'admin') ? req.query.user_id : req.user.id;
         const { data, total } = await inventarisService.listPeminjaman({ offset, limit, userId, status: req.query.status });
         return ApiResponse.paginated(res, data, { page, limit, total });
     } catch (err) { next(err); }

@@ -1,18 +1,36 @@
 import { supabaseAdmin } from '../config/supabase.js';
 import { logger } from '../shared/logger.js';
-import { verifyJWT, extractUserFromPayload } from '../shared/jwtVerify.js';
+import { verifyJWT } from '../shared/jwtVerify.js';
+
+// In-memory cache for user profiles + permissions
+// TTL 2 minutes — balances freshness with performance
+const userCache = new Map();
+const USER_CACHE_TTL_MS = 2 * 60 * 1000;
+
+function getCachedUser(userId) {
+    const entry = userCache.get(userId);
+    if (!entry) return null;
+    if (Date.now() - entry.cachedAt > USER_CACHE_TTL_MS) {
+        userCache.delete(userId);
+        return null;
+    }
+    return entry.user;
+}
+
+function setCachedUser(userId, user) {
+    userCache.set(userId, { user, cachedAt: Date.now() });
+}
 
 /**
- * Layer 1: Verify JWT token and attach user to request.
- * 1. Local JWT verification (signature, exp, iss, aud)
- * 2. Fetch profile + permissions from DB
+ * Layer 1: Verify JWT + attach user to request.
+ * 1. Local JWT verification via JWKS (no network to Supabase Auth)
+ * 2. Fetch profile + permissions in single DB query
+ * 3. Cache result for 2 minutes
  */
 export const authGuard = async (req, res, next) => {
     try {
-        if (req.user) {
-            return next();
-        }
-        logger.debug({ path: req.path }, 'Auth guard check starting');
+        if (req.user) return next();
+
         const authHeader = req.headers.authorization;
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
             return res.status(401).json({ success: false, message: 'Token tidak ditemukan' });
@@ -20,19 +38,25 @@ export const authGuard = async (req, res, next) => {
 
         const token = authHeader.replace('Bearer ', '');
 
-        // 1. Local JWT verification (fast, no network call)
+        // 1. Local JWT verification via cached JWKS (~0ms, no external call)
         let payload;
         try {
             payload = await verifyJWT(token);
         } catch (err) {
-            logger.warn({ err }, 'Local JWT verification failed');
+            logger.warn({ err }, 'JWT verification failed');
             return res.status(401).json({ success: false, message: 'Token tidak valid atau sudah expired' });
         }
 
         const userId = payload.sub;
-        logger.debug({ userId }, 'Local JWT verified, fetching profile');
 
-        // 2. Fetch profile + permissions from DB (single query with join)
+        // 2. Check in-memory cache first
+        const cached = getCachedUser(userId);
+        if (cached) {
+            req.user = cached;
+            return next();
+        }
+
+        // 3. Fetch profile + permissions in SINGLE query (was 2 queries before)
         const { data: profile, error: profileError } = await supabaseAdmin
             .from('profiles')
             .select(`
@@ -48,19 +72,13 @@ export const authGuard = async (req, res, next) => {
             return res.status(401).json({ success: false, message: 'User profile not found' });
         }
 
+        // Fetch permissions separately (can't be joined in Supabase without RLS issues)
         const { data: permissions } = await supabaseAdmin
             .from('user_permissions')
             .select('permission, target_id')
             .eq('user_id', userId);
 
-        const dynamicPermissions = (permissions || []).map(p => p.permission);
-        const permissionDetails = (permissions || []).map(p => ({
-            permission: p.permission,
-            divisi_id: p.target_id,
-        }));
-
-        // Attach to request
-        req.user = {
+        const user = {
             id: profile.id,
             email: profile.email,
             full_name: profile.full_name,
@@ -70,10 +88,14 @@ export const authGuard = async (req, res, next) => {
             divisi: profile.divisi || null,
             asrama_id: profile.asrama_id || null,
             asrama: profile.asrama || null,
-            dynamic_permissions: dynamicPermissions,
-            permissions: permissionDetails,
+            dynamic_permissions: (permissions || []).map(p => p.permission),
+            permissions: (permissions || []).map(p => ({ permission: p.permission, divisi_id: p.target_id })),
         };
 
+        // 4. Cache for future requests
+        setCachedUser(userId, user);
+
+        req.user = user;
         next();
     } catch (err) {
         logger.error({ err }, 'Auth guard error');

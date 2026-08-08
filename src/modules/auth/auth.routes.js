@@ -18,6 +18,5 @@ router.post('/login', authLimiter, validate(loginValidation), AuthController.log
 // Protected routes
 router.get('/me', authGuard, AuthController.getMe);
 router.get('/onboarding-data', authGuard, AuthController.getOnboardingData);
-// Removed: router.put('/complete-profile', ... )
 
 export default router;

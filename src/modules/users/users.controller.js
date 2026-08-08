@@ -11,7 +11,8 @@ export const list = async (req, res, next) => {
         let { divisi_id } = req.query;
 
         // Scoping for non-admins (Ketua Divisi / Platform)
-        if (req.user.base_role !== 'admin' && req.user.base_role !== 'sdm') {
+        const isSdm = req.user.dynamic_permissions?.some(p => p === 'sdm');
+        if (req.user.base_role !== 'admin' && !isSdm) {
             const isKetua = req.user.dynamic_permissions?.some(p => p === 'ketua_divisi');
 
             if (isKetua && (divisi_only === 'true' || divisi_only === true)) {
@@ -58,16 +59,15 @@ export const remove = async (req, res, next) => {
 
 export const updateMe = async (req, res, next) => {
     try {
-        const { fullName, bio, avatarUrl, divisiId, asramaId, alamat, nomorDarurat } = req.body;
-        const data = await usersService.update(req.user.id, { 
-            full_name: fullName, 
-            bio, 
-            avatar_url: avatarUrl,
-            divisi_id: divisiId,
-            asrama_id: asramaId,
-            alamat: alamat,
-            nomor_darurat: nomorDarurat,
-            is_profile_complete: true // Mark profile as complete after they update
+        const { full_name, bio, avatar_url, divisi_id, asrama_id, alamat, no_hp } = req.body;
+        const data = await usersService.update(req.user.id, {
+            full_name: full_name || null,
+            bio: bio === undefined ? undefined : (bio || null),
+            avatar_url: avatar_url === undefined ? undefined : (avatar_url || null),
+            divisi_id: divisi_id === undefined ? undefined : (divisi_id || null),
+            asrama_id: asrama_id === undefined ? undefined : (asrama_id || null),
+            alamat: alamat === undefined ? undefined : (alamat || null),
+            no_hp: no_hp === undefined ? undefined : (no_hp || null),
         });
         return ApiResponse.success(res, data, 'Profil berhasil diperbarui');
     } catch (err) { next(err); }

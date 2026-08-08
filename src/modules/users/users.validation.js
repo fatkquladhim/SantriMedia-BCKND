@@ -1,13 +1,13 @@
 import { body } from 'express-validator';
 
 export const updateUserValidation = [
-    body('full_name').optional().notEmpty().withMessage('Nama tidak boleh kosong'),
-    body('base_role').optional().isIn(['admin', 'kepala_asrama', 'user']).withMessage('Role tidak valid'),
-    body('divisi_id').optional().isUUID().withMessage('Divisi ID harus UUID'),
-    body('asrama_id').optional().isUUID().withMessage('Asrama ID harus UUID'),
-    body('alamat').optional().notEmpty().withMessage('Alamat tidak boleh kosong'),
+    body('full_name').optional({ nullable: true, checkFalsy: true }).isString().withMessage('Nama harus string'),
+    body('base_role').optional({ nullable: true, checkFalsy: true }).isIn(['admin', 'kepala_asrama', 'user']).withMessage('Role tidak valid'),
+    body('divisi_id').optional({ nullable: true, checkFalsy: true }).isUUID().withMessage('Divisi ID harus UUID'),
+    body('asrama_id').optional({ nullable: true, checkFalsy: true }).isUUID().withMessage('Asrama ID harus UUID'),
+    body('alamat').optional({ nullable: true, checkFalsy: true }).isString().withMessage('Alamat harus string'),
     body('no_hp')
-        .optional()
+        .optional({ nullable: true, checkFalsy: true })
         .matches(/^(\+62|62|0)[0-9]{8,13}$/)
         .withMessage('Format nomor HP tidak valid (contoh: 08123456789)'),
 ];

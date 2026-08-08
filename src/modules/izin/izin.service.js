@@ -17,16 +17,18 @@ export class IzinService {
                 'Disetujui': 'approved',
                 'Ditolak': 'rejected',
                 'Menunggu': 'pending',
-                'Validasi Kantor': 'approved_staf'
             };
             const mappedStatus = statusMap[status] || status;
             query = query.eq('status', mappedStatus);
         } else if (!userId && reqUser && !isManagement) {
             // Smart status filtering for LIMITED dashboard views only
+            // For kepala_asrama: show only approved izin (they can only see what staff has approved)
+            if (reqUser.base_role === 'kepala_asrama') {
+                query = query.eq('status', 'approved');
+            }
+            // For staf_kantor: show pending for them to approve
             if (reqUser.dynamic_permissions?.includes('staf_kantor')) {
                 query = query.eq('status', 'pending');
-            } else if (reqUser.base_role === 'kepala_asrama') {
-                query = query.eq('status', 'approved_staf');
             }
         }
         
