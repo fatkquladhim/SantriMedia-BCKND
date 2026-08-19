@@ -67,7 +67,7 @@ export const authGuard = async (req, res, next) => {
                 id, full_name, email, base_role, is_profile_complete, divisi_id,
                 divisi:divisi_id ( id, nama ),
                 asrama:asrama_id ( id, nama ),
-                no_hp, bio, alamat, nomor_darurat, avatar_url
+                alamat, nomor_darurat, avatar_url
             `)
             .eq('id', userId)
             .single();
