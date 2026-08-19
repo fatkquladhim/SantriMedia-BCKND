@@ -61,19 +61,26 @@ export const authGuard = async (req, res, next) => {
         }
 
         // 3. Fetch profile + permissions in SINGLE query (was 2 queries before)
-        const { data: profile, error: profileError } = await supabaseAdmin
-            .from('profiles')
-            .select(`
-                id, full_name, email, base_role, is_profile_complete, divisi_id,
-                divisi:divisi_id ( id, nama ),
-                asrama:asrama_id ( id, nama ),
-                alamat, nomor_darurat, avatar_url
-            `)
-            .eq('id', userId)
-            .single();
+        let profile = null;
+        let profileError = null;
+        try {
+            const result = await supabaseAdmin
+                .from('profiles')
+                .select(`
+                    id, full_name, email, base_role, is_profile_complete, divisi_id,
+                    divisi:divisi_id ( id, nama ),
+                    asrama:asrama_id ( id, nama )
+                `)
+                .eq('id', userId)
+                .single();
+            profile = result.data;
+            profileError = result.error;
+        } catch (err) {
+            profileError = err;
+        }
 
         if (profileError || !profile) {
-            logger.warn({ profileError, userId }, 'Profile not found');
+            logger.warn({ profileError, userId, code: profileError?.code, details: profileError?.details, message: profileError?.message }, 'Profile not found');
             return res.status(401).json({ success: false, message: 'User profile not found' });
         }
 
@@ -93,8 +100,6 @@ export const authGuard = async (req, res, next) => {
             divisi: profile.divisi || null,
             asrama_id: profile.asrama_id || null,
             asrama: profile.asrama || null,
-            no_hp: profile.no_hp || null,
-            bio: profile.bio || null,
             alamat: profile.alamat || null,
             nomor_darurat: profile.nomor_darurat || null,
             avatar_url: profile.avatar_url || null,
