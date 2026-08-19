@@ -1,11 +1,11 @@
 {
-    "functions": {
-        "src/server.js": {
-            "maxDuration": 30,
-            "memory": 1024
-        }
-    },
-    "regions": ["cdg1"],
+    "builds": [
+        { "src": "src/server.js", "use": "@vercel/node" }
+    ],
+    "routes": [
+        { "src": "/(.*)", "dest": "src/server.js" }
+    ],
+    "regions": ["iad1"],
     "cleanUrls": true,
     "trailingSlash": false
 }
