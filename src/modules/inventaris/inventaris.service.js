@@ -147,6 +147,7 @@ export class InventarisService {
 
     async importAlat(fileBuffer, filename) {
         const ALLOWED_KATEGORI = new Set(['Kamera', 'Audio', 'Lighting', 'Monitor', 'Aksesoris']);
+        const ALLOWED_KONDISI = new Set(['baik', 'rusak_ringan', 'rusak_berat', 'maintenance']);
         const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json(sheet);
@@ -161,8 +162,8 @@ export class InventarisService {
             const kategori = row.kategori || row.Kategori || row.KATEGORI;
             const serial_number = row.serial_number || row.serialNumber || row.SERIAL_NUMBER || null;
             const is_available = row.is_available || row.isAvailable || row.IS_AVAILABLE;
-            const kondisi = row.kondisi || row.Kondisi || row.KONDISI || null;
-            const lokasi = row.lokasi || row.Lokasi || row.LOKASI || null;
+            const kondisi = row.kondisi || row.Kondisi || row.KONDISI || 'baik';
+            const lokasi = row.lokasi || row.lokasi_penyimpanan || row.Lokasi || row.LOKASI || null;
 
             if (!nama) {
                 errors.push({ row: rowNum, error: 'Kolom nama wajib diisi' });
@@ -170,6 +171,11 @@ export class InventarisService {
             }
             if (!kategori || !ALLOWED_KATEGORI.has(kategori)) {
                 errors.push({ row: rowNum, error: `Kategori tidak valid: ${kategori || '(kosong)'}. Pilihan: ${[...ALLOWED_KATEGORI].join(', ')}` });
+                continue;
+            }
+            const kondisiLower = String(kondisi).toLowerCase().replace(/\s+/g, '_');
+            if (!ALLOWED_KONDISI.has(kondisiLower)) {
+                errors.push({ row: rowNum, error: `Kondisi tidak valid: ${kondisi}. Pilihan: ${[...ALLOWED_KONDISI].join(', ')}` });
                 continue;
             }
 
@@ -181,8 +187,8 @@ export class InventarisService {
                         kategori,
                         serial_number,
                         is_available: is_available !== undefined ? !!is_available : true,
-                        kondisi,
-                        lokasi,
+                        kondisi: kondisiLower,
+                        lokasi_penyimpanan: lokasi,
                     })
                     .select()
                     .single();
