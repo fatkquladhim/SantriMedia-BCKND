@@ -38,6 +38,10 @@ const corsOptions = {
 
         if (allowedOrigins.includes(origin)) {
             callback(null, true);
+        } else if (env.nodeEnv === 'production' && allowedOrigins.length === 0) {
+            // In production, if no frontendUrl is configured, allow all origins
+            // so the API doesn't break before env vars are set.
+            callback(null, true);
         } else {
             callback(new Error(`CORS blocked: ${origin} not in allowlist`));
         }
