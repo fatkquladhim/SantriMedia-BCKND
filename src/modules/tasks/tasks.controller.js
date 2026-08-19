@@ -17,19 +17,18 @@ export const list = async (req, res, next) => {
                 ?.filter(p => p.permission === 'ketua_divisi' && p.divisi_id)
                 .map(p => p.divisi_id).filter(Boolean) || [];
 
-            if (scopedDivisiIds.length > 0) {
+            if (assigned_to && assigned_to === req.user.id) {
+                // User meminta tugas pribadi — jangan batasi divisi
+                divisi_id = undefined;
+                userScope = null;
+            } else if (scopedDivisiIds.length > 0) {
                 divisi_id = scopedDivisiIds;
+            } else if (req.user.divisi_id) {
+                // Tampilkan tugas divisi ATAU tugas yang di-assign ke user ini
+                userScope = { userId: req.user.id, divisiId: req.user.divisi_id };
+                divisi_id = undefined;
             } else {
-                // REGULAR USER — filter by assigned_to jika query ke diri sendiri
-                if (assigned_to && assigned_to === req.user.id) {
-                    // hanya filter by assigned_to, tidak perlu divisi_id
-                } else if (req.user.divisi_id) {
-                    // Tampilkan tugas divisi ATAU tugas yang di-assign ke user ini
-                    userScope = { userId: req.user.id, divisiId: req.user.divisi_id };
-                    divisi_id = undefined;
-                } else {
-                    return ApiResponse.paginated(res, [], { page, limit, total: 0 });
-                }
+                return ApiResponse.paginated(res, [], { page, limit, total: 0 });
             }
         }
 
@@ -108,7 +107,8 @@ export const remove = async (req, res, next) => {
 
 export const submitEvidence = async (req, res, next) => {
     try {
-        const data = await tasksService.submitEvidence(req.params.id, req.body.evidence_url, req.user.id);
+        const { evidence_url, evidence_file_url } = req.body;
+        const data = await tasksService.submitEvidence(req.params.id, evidence_url, req.user.id, evidence_file_url);
         return ApiResponse.success(res, data, 'Evidence berhasil disubmit');
     } catch (err) { next(err); }
 };

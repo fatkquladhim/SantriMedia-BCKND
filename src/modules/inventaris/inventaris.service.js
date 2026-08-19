@@ -1,6 +1,7 @@
 import { supabaseAdmin } from '../../config/supabase.js';
 import { logger } from '../../shared/logger.js';
 import { NotificationService } from '../notifications/notifications.service.js';
+import * as XLSX from 'xlsx';
 
 const notificationService = new NotificationService();
 
@@ -142,5 +143,56 @@ export class InventarisService {
         const { data, error } = await supabaseAdmin.from('inventaris_alat').select('*').order('kategori');
         if (error) throw error;
         return data;
+    }
+
+    async importAlat(fileBuffer, filename) {
+        const ALLOWED_KATEGORI = new Set(['Kamera', 'Audio', 'Lighting', 'Monitor', 'Aksesoris']);
+        const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(sheet);
+
+        const imported = [];
+        const errors = [];
+
+        for (let i = 0; i < rows.length; i++) {
+            const row = rows[i];
+            const rowNum = i + 2;
+            const nama = row.nama || row.Nama || row.NAMA;
+            const kategori = row.kategori || row.Kategori || row.KATEGORI;
+            const serial_number = row.serial_number || row.serialNumber || row.SERIAL_NUMBER || null;
+            const is_available = row.is_available || row.isAvailable || row.IS_AVAILABLE;
+            const kondisi = row.kondisi || row.Kondisi || row.KONDISI || null;
+            const lokasi = row.lokasi || row.Lokasi || row.LOKASI || null;
+
+            if (!nama) {
+                errors.push({ row: rowNum, error: 'Kolom nama wajib diisi' });
+                continue;
+            }
+            if (!kategori || !ALLOWED_KATEGORI.has(kategori)) {
+                errors.push({ row: rowNum, error: `Kategori tidak valid: ${kategori || '(kosong)'}. Pilihan: ${[...ALLOWED_KATEGORI].join(', ')}` });
+                continue;
+            }
+
+            try {
+                const { data, error } = await supabaseAdmin
+                    .from('inventaris_alat')
+                    .insert({
+                        nama,
+                        kategori,
+                        serial_number,
+                        is_available: is_available !== undefined ? !!is_available : true,
+                        kondisi,
+                        lokasi,
+                    })
+                    .select()
+                    .single();
+                if (error) throw error;
+                imported.push(data);
+            } catch (err) {
+                errors.push({ row: rowNum, error: err.message || 'Gagal insert' });
+            }
+        }
+
+        return { imported, failed: errors.length, errors };
     }
 }

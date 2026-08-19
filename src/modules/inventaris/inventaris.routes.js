@@ -4,8 +4,10 @@ import { authGuard } from '../../middleware/authGuard.js';
 import { permissionGuard } from '../../middleware/permissionGuard.js';
 import { validate } from '../../middleware/validator.js';
 import { createAlatValidation, requestBorrowValidation } from './inventaris.validation.js';
+import multer from 'multer';
 
 const router = Router();
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 // Alat CRUD
 router.get('/', authGuard, C.listAlat);
@@ -22,5 +24,8 @@ router.patch('/pinjam/:id/return', authGuard, permissionGuard('staf_alat'), C.re
 
 // Stok opname
 router.get('/stok-opname', authGuard, permissionGuard('staf_alat'), C.stokOpname);
+
+// Import Excel/CSV
+router.post('/import', authGuard, permissionGuard('staf_alat'), upload.single('file'), C.importAlat);
 
 export default router;

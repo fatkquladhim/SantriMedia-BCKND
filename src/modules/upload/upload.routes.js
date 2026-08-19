@@ -10,5 +10,6 @@ const upload = multer({
 });
 
 router.post('/avatar', authGuard, upload.single('file'), UploadController.uploadAvatar);
+router.post('/evidence', authGuard, upload.single('file'), UploadController.uploadEvidence);
 
 export default router;

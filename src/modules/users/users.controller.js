@@ -1,6 +1,7 @@
 import { UsersService } from './users.service.js';
 import { ApiResponse } from '../../shared/apiResponse.js';
 import { parsePagination } from '../../shared/pagination.js';
+import { invalidateUserCache } from '../../middleware/authGuard.js';
 
 const usersService = new UsersService();
 
@@ -60,6 +61,7 @@ export const remove = async (req, res, next) => {
 export const updateMe = async (req, res, next) => {
     try {
         const { full_name, bio, avatar_url, divisi_id, asrama_id, alamat, no_hp } = req.body;
+        const isProfileComplete = Boolean(full_name && divisi_id && asrama_id);
         const data = await usersService.update(req.user.id, {
             full_name: full_name || null,
             bio: bio === undefined ? undefined : (bio || null),
@@ -68,7 +70,9 @@ export const updateMe = async (req, res, next) => {
             asrama_id: asrama_id === undefined ? undefined : (asrama_id || null),
             alamat: alamat === undefined ? undefined : (alamat || null),
             no_hp: no_hp === undefined ? undefined : (no_hp || null),
+            is_profile_complete: isProfileComplete,
         });
+        invalidateUserCache(req.user.id);
         return ApiResponse.success(res, data, 'Profil berhasil diperbarui');
     } catch (err) { next(err); }
 };

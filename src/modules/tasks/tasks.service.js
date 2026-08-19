@@ -155,11 +155,17 @@ export class TasksService {
         return true;
     }
 
-    async submitEvidence(id, evidenceUrl, userId) {
+    async submitEvidence(id, evidenceUrl, userId, evidenceFileUrl) {
+        const updateData = { status: 'review', updated_at: new Date().toISOString() };
+        if (evidenceFileUrl) {
+            updateData.evidence_url = evidenceFileUrl;
+        } else if (evidenceUrl) {
+            updateData.evidence_url = evidenceUrl;
+        }
         const { data, error } = await supabaseAdmin
             .from('tasks')
-            .update({ evidence_url: evidenceUrl, status: 'review', updated_at: new Date().toISOString() })
-            .eq('id', id).eq('assigned_to', userId).select().single();
+            .update(updateData)
+            .eq('id', id).eq('assigned_to', userId).select('*, assigned_user:assigned_to(full_name)').single();
         if (error) throw error;
         return data;
     }

@@ -1,8 +1,10 @@
 import { InventarisService } from './inventaris.service.js';
 import { ApiResponse } from '../../shared/apiResponse.js';
 import { parsePagination } from '../../shared/pagination.js';
+import multer from 'multer';
 
 const inventarisService = new InventarisService();
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 export const listAlat = async (req, res, next) => {
     try {
@@ -64,4 +66,14 @@ export const returnItem = async (req, res, next) => {
 export const stokOpname = async (req, res, next) => {
     try { return ApiResponse.success(res, await inventarisService.stokOpname()); }
     catch (err) { next(err); }
+};
+
+export const importAlat = async (req, res, next) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: 'File Excel/CSV wajib diunggah' });
+        }
+        const result = await inventarisService.importAlat(req.file.buffer, req.file.originalname);
+        return ApiResponse.success(res, result, `Import selesai: ${result.imported.length} berhasil, ${result.failed} gagal`);
+    } catch (err) { next(err); }
 };

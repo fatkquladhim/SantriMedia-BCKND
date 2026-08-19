@@ -21,6 +21,10 @@ function setCachedUser(userId, user) {
     userCache.set(userId, { user, cachedAt: Date.now() });
 }
 
+export function invalidateUserCache(userId) {
+    userCache.delete(userId);
+}
+
 /**
  * Layer 1: Verify JWT + attach user to request.
  * 1. Local JWT verification via JWKS (no network to Supabase Auth)
@@ -62,7 +66,8 @@ export const authGuard = async (req, res, next) => {
             .select(`
                 id, full_name, email, base_role, is_profile_complete, divisi_id,
                 divisi:divisi_id ( id, nama ),
-                asrama:asrama_id ( id, nama )
+                asrama:asrama_id ( id, nama ),
+                no_hp, bio, alamat, nomor_darurat, avatar_url
             `)
             .eq('id', userId)
             .single();
@@ -88,6 +93,11 @@ export const authGuard = async (req, res, next) => {
             divisi: profile.divisi || null,
             asrama_id: profile.asrama_id || null,
             asrama: profile.asrama || null,
+            no_hp: profile.no_hp || null,
+            bio: profile.bio || null,
+            alamat: profile.alamat || null,
+            nomor_darurat: profile.nomor_darurat || null,
+            avatar_url: profile.avatar_url || null,
             dynamic_permissions: (permissions || []).map(p => p.permission),
             permissions: (permissions || []).map(p => ({ permission: p.permission, divisi_id: p.target_id })),
         };
