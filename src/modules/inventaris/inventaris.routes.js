@@ -25,6 +25,9 @@ router.patch('/pinjam/:id/return', authGuard, permissionGuard('staf_alat'), C.re
 // Stok opname
 router.get('/stok-opname', authGuard, permissionGuard('staf_alat'), C.stokOpname);
 
+// Daftar kategori (distinct)
+router.get('/kategori', authGuard, C.listKategori);
+
 // Import Excel/CSV
 router.post('/import', authGuard, permissionGuard('staf_alat'), upload.single('file'), C.importAlat);
 

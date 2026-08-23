@@ -50,6 +50,49 @@ export const uploadAvatar = async (req, res, next) => {
     }
 };
 
+export const uploadAlatImage = async (req, res, next) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: 'Tidak ada file yang diunggah' });
+        }
+
+        const file = req.file;
+        const allowedMimeTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif'];
+        const allowedExtensions = new Set(['png', 'jpg', 'jpeg', 'webp', 'gif']);
+        const ext = (file.originalname.split('.').pop() || '').toLowerCase();
+        const mimeOk = allowedMimeTypes.includes(file.mimetype);
+        const extOk = allowedExtensions.has(ext);
+
+        if (!mimeOk && !extOk) {
+            return res.status(400).json({ success: false, message: `Tipe file tidak didukung. Gunakan PNG, JPG, WEBP, GIF. (mime=${file.mimetype}, ext=.${ext})` });
+        }
+
+        const fileName = `alat-${req.user.id}-${Date.now()}.${ext}`;
+        await ensureBucket('alat-images');
+
+        const { data, error } = await supabaseAdmin.storage
+            .from('alat-images')
+            .upload(fileName, file.buffer, {
+                contentType: file.mimetype,
+                upsert: true
+            });
+
+        if (error) {
+            console.error('Alat image upload error:', JSON.stringify(error, null, 2));
+            throw error;
+        }
+
+        const { data: publicData } = supabaseAdmin.storage
+            .from('alat-images')
+            .getPublicUrl(fileName);
+
+        return ApiResponse.success(res, { url: publicData.publicUrl }, 'Gambar alat berhasil diunggah');
+    } catch (err) {
+        console.error('Alat image upload error:', err);
+        next(err);
+    }
+};
+
 export const uploadEvidence = async (req, res, next) => {
     try {
         if (!req.file) {

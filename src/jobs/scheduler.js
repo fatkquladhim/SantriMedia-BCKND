@@ -1,5 +1,6 @@
 import cron from 'node-cron';
 import { logger } from '../shared/logger.js';
+import { StaffAlatService } from '../modules/staff-alat/staffAlat.service.js';
 
 /**
  * Initialize all background job schedules.
@@ -16,6 +17,18 @@ export function initScheduler() {
     cron.schedule('0 9 * * *', async () => {
         logger.info('Running daily inventory anomaly check...');
         // TODO: Trigger inventory anomaly detection
+    });
+
+    // Staff alat: notifikasi deadline sewa — setiap hari 07:00
+    cron.schedule('0 7 * * *', async () => {
+        logger.info('Running staff-alat deadline scan...');
+        try {
+            const service = new StaffAlatService();
+            await service.markOverdueTransactions();
+            await service.scanDeadlinesAndNotify();
+        } catch (err) {
+            logger.error({ err }, 'Staff-alat deadline scan failed');
+        }
     });
 
     logger.info('📅 Background job scheduler initialized');

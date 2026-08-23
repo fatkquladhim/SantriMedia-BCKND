@@ -145,6 +145,16 @@ export class InventarisService {
         return data;
     }
 
+    async listKategori() {
+        const { data, error } = await supabaseAdmin
+            .from('inventaris_alat')
+            .select('kategori')
+            .not('kategori', 'is', null);
+        if (error) throw error;
+        const unique = [...new Set((data || []).map((row) => row.kategori).filter(Boolean))].sort();
+        return unique;
+    }
+
     async importAlat(fileBuffer, filename) {
         const ALLOWED_KATEGORI = new Set(['Kamera', 'Audio', 'Lighting', 'Monitor', 'Aksesoris']);
         const ALLOWED_KONDISI = new Set(['baik', 'rusak_ringan', 'rusak_berat', 'maintenance']);

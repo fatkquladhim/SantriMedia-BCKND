@@ -20,6 +20,7 @@ import aiRoutes from './modules/ai-agent/ai.routes.js';
 import uploadRoutes from './modules/upload/upload.routes.js';
 import searchRoutes from './modules/search/search.routes.js';
 import notificationsRoutes from './modules/notifications/notifications.routes.js';
+import staffAlatRoutes from './modules/staff-alat/staffAlat.routes.js';
 
 
 import { authGuard } from './middleware/authGuard.js';
@@ -112,6 +113,7 @@ app.use('/api/v1/ai', authGuard, profileComplete, aiRoutes);
 app.use('/api/v1/notifications', authGuard, profileComplete, notificationsRoutes);
 app.use('/api/v1/upload', authGuard, profileComplete, uploadRoutes);
 app.use('/api/v1/search', authGuard, profileComplete, searchRoutes);
+app.use('/api/v1/staff-alat', authGuard, profileComplete, staffAlatRoutes);
 
 
 // ===== 404 Handler =====

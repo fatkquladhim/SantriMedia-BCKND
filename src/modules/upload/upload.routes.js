@@ -11,5 +11,6 @@ const upload = multer({
 
 router.post('/avatar', authGuard, upload.single('file'), UploadController.uploadAvatar);
 router.post('/evidence', authGuard, upload.single('file'), UploadController.uploadEvidence);
+router.post('/alat-image', authGuard, upload.single('file'), UploadController.uploadAlatImage);
 
 export default router;

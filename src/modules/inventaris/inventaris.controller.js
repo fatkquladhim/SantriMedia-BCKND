@@ -68,6 +68,13 @@ export const stokOpname = async (req, res, next) => {
     catch (err) { next(err); }
 };
 
+export const listKategori = async (req, res, next) => {
+    try {
+        const kategori = await inventarisService.listKategori();
+        return ApiResponse.success(res, { kategori }, 'Daftar kategori alat');
+    } catch (err) { next(err); }
+};
+
 export const importAlat = async (req, res, next) => {
     try {
         if (!req.file) {
